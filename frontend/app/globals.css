@@ -1,0 +1,93 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+
+/* Système de design Learning Data : mêmes couleurs et typographie que les maquettes Figma. */
+@theme {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --color-brand-50: #eaf0ff;
+  --color-brand-100: #d6e2ff;
+  --color-brand-200: #b9c8f5;
+  --color-brand-500: #4472eb;
+  --color-brand-600: #2d5be3;
+  --color-brand-700: #2449b8;
+  --color-brand-800: #1d3a91;
+
+  --color-ink: #0f172a;
+  --color-muted: #64748b;
+  --color-line: #e3e8ef;
+  --color-canvas: #f6f7fb;
+  --color-navy: #0f1b3d;
+
+  --color-success-50: #e7f6ec;
+  --color-success-600: #16a34a;
+  --color-warning-50: #fff4de;
+  --color-warning-500: #f59e0b;
+  --color-warning-700: #b45309;
+  --color-danger-50: #fdecec;
+  --color-danger-600: #dc2626;
+  --color-violet-50: #f3e8ff;
+  --color-violet-600: #7c3aed;
+
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.04);
+  --shadow-pop: 0 12px 32px rgb(15 23 42 / 0.08);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    @apply bg-canvas text-ink antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-brand-600;
+  }
+  ::selection {
+    @apply bg-brand-100;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+  .animate-fade-in {
+    animation: fade-in 0.18s ease-out;
+  }
+  .animate-slide-in {
+    animation: slide-in 0.2s ease-out;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes slide-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: white;
+  }
+}
