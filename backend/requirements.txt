@@ -1,0 +1,19 @@
+# Dépendances du backend Learning Data (Python 3.11 à 3.13)
+Django>=5.2,<5.3
+djangorestframework>=3.15,<4
+djangorestframework-simplejwt>=5.3,<6
+django-cors-headers>=4.4,<5
+django-filter>=24.0
+drf-spectacular>=0.27
+psycopg[binary]>=3.2,<4
+python-dotenv>=1.0
+whitenoise>=6.7
+
+# Machine learning
+numpy>=1.26
+pandas>=2.2
+scikit-learn>=1.5
+joblib>=1.4
+
+# Serveur de production (Linux / macOS uniquement)
+gunicorn>=22.0; sys_platform != "win32"
