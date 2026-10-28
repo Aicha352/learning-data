@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+backend/.env
+backend/ml_artifacts/
+backend/staticfiles/
+
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
+frontend/tsconfig.tsbuildinfo
+
+# Divers
+.DS_Store
+.idea/
+.vscode/
+*.log
+.env

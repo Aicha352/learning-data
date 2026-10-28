@@ -1,0 +1,74 @@
+# Lancement complet : docker compose up --build
+# Puis ouvrir http://localhost:3000
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: learning_data
+      POSTGRES_USER: learning_data
+      POSTGRES_PASSWORD: learning_data
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U learning_data -d learning_data"]
+      interval: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    environment:
+      DJANGO_DEBUG: "False"
+      DJANGO_SECRET_KEY: "change-moi-en-production-avec-une-longue-chaine-aleatoire"
+      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1,backend"
+      DJANGO_CSRF_TRUSTED_ORIGINS: "http://localhost:3000"
+      AUTH_COOKIE_SECURE: "False" # passer à True derrière HTTPS
+      FRONTEND_URL: "http://localhost:3000"
+      CORS_ALLOWED_ORIGINS: "http://localhost:3000"
+      POSTGRES_DB: learning_data
+      POSTGRES_USER: learning_data
+      POSTGRES_PASSWORD: learning_data
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      ML_ARTIFACTS_DIR: /app/ml_artifacts
+      SEED_DEMO: "1" # données de démonstration au premier lancement
+    volumes:
+      - ml_artifacts:/app/ml_artifacts
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        BACKEND_URL: http://backend:8000
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
+  # Tâches planifiées : réentraînement nocturne et relances des apprenants inactifs.
+  scheduler:
+    build: ./backend
+    # Pas de migration ici (le service backend s'en charge) : simple boucle quotidienne.
+    entrypoint: ["sh", "-c"]
+    command: ["while true; do sleep 86400; python manage.py train_models; python manage.py send_reminders; done"]
+    environment:
+      DJANGO_DEBUG: "False"
+      DJANGO_SECRET_KEY: "change-moi-en-production-avec-une-longue-chaine-aleatoire"
+      POSTGRES_DB: learning_data
+      POSTGRES_USER: learning_data
+      POSTGRES_PASSWORD: learning_data
+      POSTGRES_HOST: db
+      ML_ARTIFACTS_DIR: /app/ml_artifacts
+      ML_TRAIN_IN_BACKGROUND: "False"
+    volumes:
+      - ml_artifacts:/app/ml_artifacts
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  ml_artifacts:

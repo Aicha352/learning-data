@@ -1,0 +1,8 @@
+# Caddy reçoit les visiteurs et les envoie vers le site Next.js.
+# SITE_URL vient du fichier .env :
+#   https://mon-domaine.com  → HTTPS automatique (cadenas)
+#   http://51.xx.xx.xx       → HTTP simple, quand on n'a pas encore de domaine
+{$SITE_URL} {
+	encode zstd gzip
+	reverse_proxy frontend:3000
+}

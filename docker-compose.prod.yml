@@ -1,0 +1,101 @@
+# Learning Data — mise en ligne sur un VPS (OVHcloud ou autre)
+#
+# Lancement :   bash deploy.sh
+# (ou à la main : docker compose -f docker-compose.prod.yml up -d --build)
+#
+# Les secrets (clé Django, mot de passe PostgreSQL, adresse du site) sont lus
+# dans le fichier .env, créé SUR LE SERVEUR par deploy.sh. Ne le mets jamais sur GitHub.
+
+x-backend-env: &backend-env
+  DJANGO_DEBUG: "False"
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?DJANGO_SECRET_KEY manque dans .env}
+  DJANGO_ALLOWED_HOSTS: "${DOMAIN:?DOMAIN manque dans .env},localhost,127.0.0.1,backend"
+  DJANGO_CSRF_TRUSTED_ORIGINS: ${SITE_URL:?SITE_URL manque dans .env}
+  AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-True}
+  FRONTEND_URL: ${SITE_URL}
+  CORS_ALLOWED_ORIGINS: ${SITE_URL}
+  POSTGRES_DB: learning_data
+  POSTGRES_USER: learning_data
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD manque dans .env}
+  POSTGRES_HOST: db
+  POSTGRES_PORT: "5432"
+  ML_ARTIFACTS_DIR: /app/ml_artifacts
+
+services:
+  # Base de données : invisible depuis Internet.
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: learning_data
+      POSTGRES_USER: learning_data
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U learning_data -d learning_data"]
+      interval: 5s
+      retries: 10
+
+  # API Django (gunicorn).
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      <<: *backend-env
+      SEED_DEMO: ${SEED_DEMO:-1} # données de démonstration au premier lancement
+    volumes:
+      - ml_artifacts:/app/ml_artifacts
+    depends_on:
+      db:
+        condition: service_healthy
+    # Accessible seulement depuis le serveur lui-même (admin Django via un tunnel SSH).
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  # Site Next.js : il transmet lui-même les appels /api au backend.
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        BACKEND_URL: http://backend:8000
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  # Réentraînement nocturne des modèles + relances des apprenants inactifs.
+  scheduler:
+    build: ./backend
+    restart: unless-stopped
+    entrypoint: ["sh", "-c"]
+    command: ["while true; do sleep 86400; python manage.py train_models; python manage.py send_reminders; done"]
+    environment:
+      <<: *backend-env
+      ML_TRAIN_IN_BACKGROUND: "False"
+    volumes:
+      - ml_artifacts:/app/ml_artifacts
+    depends_on:
+      - backend
+
+  # Porte d'entrée publique : HTTPS automatique (certificat Let's Encrypt).
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      SITE_URL: ${SITE_URL}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - frontend
+
+volumes:
+  pgdata:
+  ml_artifacts:
+  caddy_data:
+  caddy_config:
